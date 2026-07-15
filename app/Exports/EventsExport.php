@@ -10,11 +10,11 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 class EventsExport implements FromCollection, WithHeadings, WithMapping
 {
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
     public function collection()
     {
-        return auth()->user()->events()->with(['kategori', 'orders'])->get();
+        return Event::query()->with(['kategori', 'orders'])->get();
     }
 
     public function headings(): array
@@ -39,7 +39,7 @@ class EventsExport implements FromCollection, WithHeadings, WithMapping
             $event->tanggal_waktu->format('Y-m-d H:i'),
             $event->lokasi,
             $event->status,
-            $event->orders()->where('status', 'paid')->count(),
+            $event->orders()->count(),
         ];
     }
 }

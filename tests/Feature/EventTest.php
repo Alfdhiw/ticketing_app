@@ -15,7 +15,7 @@ uses(RefreshDatabase::class);
 test('event index page can be accessed by authenticated user and lists events', function () {
     $user = User::factory()->create();
     $kategori = Kategori::create(['nama' => 'Konser Musik']);
-    
+
     $event = Event::create([
         'user_id' => $user->id,
         'kategori_id' => $kategori->id,
@@ -125,7 +125,7 @@ test('event can be updated when there are no ticket sales', function () {
         ->put(route('admin.events.update', $event), $payload);
 
     $response->assertRedirect(route('admin.events.index'));
-    
+
     $event->refresh();
     $this->assertEquals('Konser Dewa Updated', $event->judul);
     $this->assertEquals('Lokasi baru', $event->lokasi);
@@ -222,8 +222,29 @@ test('event cannot be deleted if there are ticket sales', function () {
 
     $response->assertRedirect(route('admin.events.index'));
     $response->assertSessionHas('error');
-    
+
     $this->assertDatabaseHas('events', ['id' => $event->id]);
+});
+
+test('admin can export events to excel', function () {
+    $user = User::factory()->create();
+    $kategori = Kategori::create(['nama' => 'Festival']);
+
+    Event::create([
+        'user_id' => $user->id,
+        'kategori_id' => $kategori->id,
+        'judul' => 'Export Event Test',
+        'deskripsi' => 'Deskripsi',
+        'lokasi' => 'Lokasi',
+        'tanggal_waktu' => now()->addDays(5),
+        'gambar' => 'events/export.jpg',
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('admin.events.export'));
+
+    $response->assertDownload('events.xlsx');
 });
 
 test('event can be cloned', function () {
@@ -300,7 +321,7 @@ test('events can be bulk deleted except ones with sales', function () {
         ]);
 
     $response->assertRedirect();
-    
+
     // Event 1 should be deleted, Event 2 should still exist
     $this->assertDatabaseMissing('events', ['id' => $event1->id]);
     $this->assertDatabaseHas('events', ['id' => $event2->id]);
@@ -344,7 +365,7 @@ test('event status transitions record in status history log', function () {
         'event_id' => $event->id,
         'status' => 'Upcoming'
     ]);
-    
+
     $this->assertDatabaseHas('event_status_histories', [
         'event_id' => $event->id,
         'status' => 'Completed'
@@ -393,4 +414,3 @@ test('events can be filtered by status on index page', function () {
     $response->assertSee('Completed Event');
     $response->assertDontSee('Upcoming Event');
 });
-

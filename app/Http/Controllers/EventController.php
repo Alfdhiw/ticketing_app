@@ -13,22 +13,34 @@ use App\Exports\EventsExport;
 
 class EventController extends Controller
 {
+    private function ensureAdmin(): void
+    {
+        if (auth()->user()?->role !== 'admin') {
+            abort(403);
+        }
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $query = auth()->user()->events()->with('kategori');
+        $this->ensureAdmin();
 
-        if ($request->has('search') && $request->search != '') {
-            $query->where('judul', 'like', '%' . $request->search . '%');
+        $query = Event::query()->with(['kategori', 'tikets']);
+
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('judul', 'like', '%' . $request->search . '%')
+                    ->orWhere('lokasi', 'like', '%' . $request->search . '%');
+            });
         }
 
-        if ($request->has('kategori') && $request->kategori != '') {
+        if ($request->filled('kategori')) {
             $query->where('kategori_id', $request->kategori);
         }
 
-        if ($request->has('status') && $request->status != '') {
+        if ($request->filled('status')) {
             if ($request->status === 'Upcoming') {
                 $query->upcoming();
             } elseif ($request->status === 'Ongoing') {
@@ -38,11 +50,7 @@ class EventController extends Controller
             }
         }
 
-        if ($request->has('sort') && $request->sort == 'oldest') {
-            $query->orderBy('tanggal_waktu', 'asc');
-        } else {
-            $query->orderBy('tanggal_waktu', 'desc');
-        }
+        $query->orderBy('tanggal_waktu', $request->get('sort') === 'oldest' ? 'asc' : 'desc');
 
         $events = $query->paginate(10);
         $kategoris = Kategori::all();
@@ -52,21 +60,25 @@ class EventController extends Controller
 
     public function export()
     {
+        $this->ensureAdmin();
+
         return Excel::download(new EventsExport, 'events.xlsx');
     }
 
     public function bulkDelete(Request $request)
     {
+        $this->ensureAdmin();
+
         $ids = $request->input('ids');
         if (empty($ids)) {
             return redirect()->back()->with('error', 'Tidak ada event yang dipilih.');
         }
 
-        $events = auth()->user()->events()->whereIn('id', $ids)->get();
+        $events = Event::whereIn('id', $ids)->get();
         $deletedCount = 0;
         foreach ($events as $event) {
             if (!$event->hasSales()) {
-                if (Storage::disk('public')->exists($event->gambar)) {
+                if ($event->gambar && Storage::disk('public')->exists($event->gambar)) {
                     Storage::disk('public')->delete($event->gambar);
                 }
                 $event->delete();
@@ -79,6 +91,8 @@ class EventController extends Controller
 
     public function clone(Event $event)
     {
+        $this->ensureAdmin();
+
         if ($event->user_id !== auth()->id()) {
             abort(403);
         }
@@ -108,6 +122,8 @@ class EventController extends Controller
      */
     public function create()
     {
+        $this->ensureAdmin();
+
         $kategoris = Kategori::all();
         return view('admin.events.create', compact('kategoris'));
     }
@@ -117,9 +133,13 @@ class EventController extends Controller
      */
     public function store(EventFormRequest $request)
     {
+        $this->ensureAdmin();
+
         $validated = $request->validated();
-        
-        $imagePath = $request->file('gambar')->store('events', 'public');
+
+        $imagePath = $request->hasFile('gambar')
+            ? $request->file('gambar')->store('events', 'public')
+            : 'konser.jpg';
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $imagePath) {
             $event = auth()->user()->events()->create([
@@ -171,11 +191,13 @@ class EventController extends Controller
      */
     public function edit(Event $event)
     {
+        $this->ensureAdmin();
+
         if ($event->user_id !== auth()->id()) {
             abort(403);
         }
 
-        $event->load('tikets');
+        $event->load(['tikets', 'eventStatusHistories']);
         $kategoris = Kategori::all();
         return view('admin.events.edit', compact('event', 'kategoris'));
     }
@@ -185,21 +207,21 @@ class EventController extends Controller
      */
     public function update(EventFormRequest $request, Event $event)
     {
+        $this->ensureAdmin();
+
         if ($event->user_id !== auth()->id()) {
             abort(403);
         }
 
         $validated = $request->validated();
-        
-        // Cek jika sudah ada penjualan
+
         if ($event->hasSales()) {
-            // Jangan update tanggal_waktu
             unset($validated['tanggal_waktu']);
+            unset($validated['tikets']);
         }
 
         if ($request->hasFile('gambar')) {
-            // Hapus gambar lama
-            if (Storage::disk('public')->exists($event->gambar)) {
+            if ($event->gambar && $event->gambar !== 'konser.jpg' && Storage::disk('public')->exists($event->gambar)) {
                 Storage::disk('public')->delete($event->gambar);
             }
             $validated['gambar'] = $request->file('gambar')->store('events', 'public');
@@ -217,10 +239,9 @@ class EventController extends Controller
                 ]);
             }
 
-            // Update Tiket (Sederhananya hapus yang lama dan buat baru jika belum ada penjualan)
             if (!$event->hasSales()) {
                 $event->tikets()->delete();
-                foreach ($request->tikets as $tiketData) {
+                foreach ($request->tikets ?? [] as $tiketData) {
                     $event->tikets()->create([
                         'tipe' => $tiketData['tipe'],
                         'harga' => $tiketData['harga'],
@@ -238,6 +259,8 @@ class EventController extends Controller
      */
     public function destroy(Event $event)
     {
+        $this->ensureAdmin();
+
         if ($event->user_id !== auth()->id()) {
             abort(403);
         }
@@ -246,7 +269,7 @@ class EventController extends Controller
             return redirect()->route('admin.events.index')->with('error', 'Tidak dapat menghapus event yang sudah memiliki penjualan tiket.');
         }
 
-        if (Storage::disk('public')->exists($event->gambar)) {
+        if ($event->gambar && $event->gambar !== 'konser.jpg' && Storage::disk('public')->exists($event->gambar)) {
             Storage::disk('public')->delete($event->gambar);
         }
 
