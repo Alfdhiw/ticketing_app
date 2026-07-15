@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class Event extends Model
 {
@@ -26,18 +27,39 @@ class Event extends Model
 
     public function getStatusAttribute()
     {
-        if ($this->tanggal_waktu->isFuture()) {
+        if (! $this->tanggal_waktu instanceof Carbon) {
             return 'Upcoming';
-        } elseif ($this->tanggal_waktu->isToday()) {
-            return 'Ongoing';
-        } else {
-            return 'Completed';
         }
+
+        $now = Carbon::now();
+        $eventTime = Carbon::parse($this->tanggal_waktu);
+
+        if ($eventTime->gt($now)) {
+            return 'Upcoming';
+        }
+
+        if ($eventTime->lte($now) && $eventTime->gte($now->copy()->subHours(3))) {
+            return 'Ongoing';
+        }
+
+        return 'Completed';
     }
 
     public function getImageUrlAttribute()
     {
-        return $this->gambar ? asset('storage/' . $this->gambar) : asset('images/default-event.jpg');
+        if (empty($this->gambar)) {
+            return asset('images/konser.jpg');
+        }
+
+        if (filter_var($this->gambar, FILTER_VALIDATE_URL)) {
+            return $this->gambar;
+        }
+
+        if (Storage::disk('public')->exists($this->gambar)) {
+            return asset('storage/' . $this->gambar);
+        }
+
+        return asset('images/konser.jpg');
     }
 
     public function hasSales()
@@ -52,12 +74,15 @@ class Event extends Model
 
     public function scopeOngoing($query)
     {
-        return $query->whereDate('tanggal_waktu', Carbon::today());
+        $now = Carbon::now();
+
+        return $query->where('tanggal_waktu', '<=', $now)
+            ->where('tanggal_waktu', '>=', $now->copy()->subHours(3));
     }
 
     public function scopeCompleted($query)
     {
-        return $query->where('tanggal_waktu', '<', Carbon::today());
+        return $query->where('tanggal_waktu', '<', Carbon::now()->copy()->subHours(3));
     }
 
     public function tikets()
@@ -74,9 +99,14 @@ class Event extends Model
     {
         return $this->belongsTo(User::class);
     }
-    
+
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function eventStatusHistories()
+    {
+        return $this->hasMany(EventStatusHistory::class);
     }
 }

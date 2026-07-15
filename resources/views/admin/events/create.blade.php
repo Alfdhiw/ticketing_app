@@ -16,59 +16,77 @@
     </div>
 
     @if ($errors->any())
-        <div class="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
-            <ul class="list-disc list-inside">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
+    <div class="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
+        <ul class="list-disc list-inside">
+            @foreach ($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
     @endif
 
-    <form action="{{ route('admin.events.store') }}" method="POST" enctype="multipart/form-data" id="event-form">
+    <form action="{{ route('admin.events.store') }}" method="POST" enctype="multipart/form-data" id="event-form" novalidate>
         @csrf
 
         <!-- Informasi Event -->
         <h3 class="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Informasi Event</h3>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Judul Event *</label>
-                <input type="text" name="judul" value="{{ old('judul') }}" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" name="judul" value="{{ old('judul') }}" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 @error('judul') border-red-500 @enderror">
+                @error('judul')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
             </div>
-            
+
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Kategori *</label>
-                <select name="kategori_id" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <select name="kategori_id" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 @error('kategori_id') border-red-500 @enderror">
                     <option value="">Pilih Kategori</option>
                     @foreach($kategoris as $kategori)
-                        <option value="{{ $kategori->id }}" {{ old('kategori_id') == $kategori->id ? 'selected' : '' }}>
-                            {{ $kategori->nama }}
-                        </option>
+                    <option value="{{ $kategori->id }}" {{ old('kategori_id') == $kategori->id ? 'selected' : '' }}>
+                        {{ $kategori->nama }}
+                    </option>
                     @endforeach
                 </select>
+                @error('kategori_id')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
             </div>
-            
+
             <div class="md:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi *</label>
-                <textarea name="deskripsi" rows="4" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">{{ old('deskripsi') }}</textarea>
+                <textarea name="deskripsi" rows="4" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 @error('deskripsi') border-red-500 @enderror">{{ old('deskripsi') }}</textarea>
+                @error('deskripsi')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
             </div>
-            
+
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Lokasi *</label>
-                <input type="text" name="lokasi" value="{{ old('lokasi') }}" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" name="lokasi" value="{{ old('lokasi') }}" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 @error('lokasi') border-red-500 @enderror">
+                @error('lokasi')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
             </div>
-            
+
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal & Waktu *</label>
-                <input type="datetime-local" name="tanggal_waktu" value="{{ old('tanggal_waktu') }}" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <input type="datetime-local" name="tanggal_waktu" value="{{ old('tanggal_waktu') }}" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 @error('tanggal_waktu') border-red-500 @enderror">
+                @error('tanggal_waktu')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
             </div>
-            
+
             <div class="md:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Gambar Poster *</label>
-                <input type="file" name="gambar" id="imageInput" accept="image/*" required class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <input type="file" name="gambar" id="imageInput" accept="image/*" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 @error('gambar') border-red-500 @enderror">
+                @error('gambar')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
                 <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, GIF, max 2MB. Gambar dapat di-crop sebelum diunggah.</p>
-                
+
                 <!-- Crop Preview Container (Hidden by default) -->
                 <div id="crop-container" class="hidden mt-4 bg-gray-50 p-4 rounded-lg border">
                     <h4 class="text-sm font-medium mb-2">Potong Gambar</h4>
@@ -90,23 +108,32 @@
                 + Tambah Tiket
             </button>
         </div>
-        
+
         <div id="tiket-container" class="space-y-4 mb-8">
             <div class="tiket-row flex gap-4 items-end bg-gray-50 p-4 rounded-lg">
                 <div class="flex-1">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Tipe Tiket</label>
-                    <select name="tikets[0][tipe]" required class="w-full px-3 py-2 border rounded">
+                    <select name="tikets[0][tipe]" class="w-full px-3 py-2 border rounded @error('tikets.0.tipe') border-red-500 @enderror">
                         <option value="reguler">Reguler</option>
                         <option value="premium">Premium</option>
                     </select>
+                    @error('tikets.0.tipe')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div class="flex-1">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Harga (Rp)</label>
-                    <input type="number" name="tikets[0][harga]" min="0" required class="w-full px-3 py-2 border rounded" placeholder="Contoh: 150000">
+                    <input type="number" name="tikets[0][harga]" min="0" class="w-full px-3 py-2 border rounded @error('tikets.0.harga') border-red-500 @enderror" placeholder="Contoh: 150000">
+                    @error('tikets.0.harga')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div class="w-32">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Stok</label>
-                    <input type="number" name="tikets[0][stok]" min="1" required class="w-full px-3 py-2 border rounded" placeholder="100">
+                    <input type="number" name="tikets[0][stok]" min="1" class="w-full px-3 py-2 border rounded @error('tikets.0.stok') border-red-500 @enderror" placeholder="100">
+                    @error('tikets.0.stok')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div class="w-10"></div>
             </div>
@@ -132,18 +159,18 @@
             row.innerHTML = `
                 <div class="flex-1">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Tipe Tiket</label>
-                    <select name="tikets[${tiketCount}][tipe]" required class="w-full px-3 py-2 border rounded">
+                    <select name="tikets[${tiketCount}][tipe]" class="w-full px-3 py-2 border rounded">
                         <option value="reguler">Reguler</option>
                         <option value="premium">Premium</option>
                     </select>
                 </div>
                 <div class="flex-1">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Harga (Rp)</label>
-                    <input type="number" name="tikets[${tiketCount}][harga]" min="0" required class="w-full px-3 py-2 border rounded" placeholder="Contoh: 150000">
+                    <input type="number" name="tikets[${tiketCount}][harga]" min="0" class="w-full px-3 py-2 border rounded" placeholder="Contoh: 150000">
                 </div>
                 <div class="w-32">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Stok</label>
-                    <input type="number" name="tikets[${tiketCount}][stok]" min="1" required class="w-full px-3 py-2 border rounded" placeholder="100">
+                    <input type="number" name="tikets[${tiketCount}][stok]" min="1" class="w-full px-3 py-2 border rounded" placeholder="100">
                 </div>
                 <div class="w-10 flex justify-center">
                     <button type="button" class="remove-btn text-red-500 hover:text-red-700">
@@ -181,11 +208,11 @@
                 reader.onload = function(e) {
                     imageToCrop.src = e.target.result;
                     cropContainer.classList.remove('hidden');
-                    
+
                     if (cropper) {
                         cropper.destroy();
                     }
-                    
+
                     cropper = new Cropper(imageToCrop, {
                         aspectRatio: 16 / 9,
                         viewMode: 2,
@@ -208,18 +235,20 @@
             if (cropper) {
                 cropper.getCroppedCanvas().toBlob((blob) => {
                     // Buat file baru dari blob
-                    const croppedFile = new File([blob], originalFileName, { type: "image/jpeg" });
-                    
+                    const croppedFile = new File([blob], originalFileName, {
+                        type: "image/jpeg"
+                    });
+
                     // Masukkan ke input file
                     const dataTransfer = new DataTransfer();
                     dataTransfer.items.add(croppedFile);
                     imageInput.files = dataTransfer.files;
-                    
+
                     // Sembunyikan cropper
                     cropContainer.classList.add('hidden');
                     cropper.destroy();
                     cropper = null;
-                    
+
                     alert("Gambar berhasil dipotong dan siap diunggah!");
                 }, 'image/jpeg');
             }
